@@ -3,12 +3,14 @@
   "name": "server",
   "main": "src/index.ts",
   "compatibility_date": "2024-09-01",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "my-app-db",
-      "database_id": "YOUR_DATABASE_ID_FROM_STEP_1"
+      "database_name": "My-cloudflare",
+      "database_id": "5aba4c6c-e131-4136-90b0-110657009862"
     }
   ]
 }

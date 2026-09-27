@@ -4,7 +4,7 @@ Two Cloudflare Workers, matching the dashboard:
 
 | Worker   | URL                                     | What it is                          |
 | -------- | --------------------------------------- | ----------------------------------- |
-| `server` | https://server.insovaidev.workers.dev   | Hono API + Cloudflare D1 (`my-app-db`) |
+| `server` | https://server.insovaidev.workers.dev   | Hono API + Cloudflare D1 (`My-cloudflare`) |
 | `client` | https://client.insovaidev.workers.dev   | Vue 3 + Vite SPA (static assets)    |
 
 ```
@@ -26,8 +26,8 @@ Two Cloudflare Workers, matching the dashboard:
 ## First-time setup
 
 ```bash
-cd server && npm install && npx wrangler login
-npx wrangler d1 create my-app-db     # paste database_id into server/wrangler.json
+cd server && npm install && npx wrangler login   # or export CLOUDFLARE_API_TOKEN
+npm run deploy                       # uses D1 database My-cloudflare (id in server/wrangler.json)
 npm run db:migrate:remote            # create tables + seed users
 ```
 
@@ -50,8 +50,15 @@ cd client && npm run dev                               # http://localhost:5173
 | Method | Path          | Description |
 | ------ | ------------- | ----------- |
 | GET    | `/api/health` | Health check |
-| GET    | `/api/users`  | List users |
-| POST   | `/api/users`  | Create user `{ name, email }` (409 on duplicate email) |
+| GET    | `/api/users`      | List users |
+| GET    | `/api/users/:id`  | Get one user (404 if missing) |
+| POST   | `/api/users`      | Create user `{ name, email }` → 201 (409 on duplicate email) |
+| PUT    | `/api/users/:id`  | Update user `{ name, email }` (404 / 409) |
+| DELETE | `/api/users/:id`  | Delete user (404 if missing) |
+
+Emails are trimmed, lower-cased and validated; invalid input returns 400.
+
+A Cloudflare API token needs **Workers Scripts: Edit** and **D1: Edit** (account level) to deploy.
 
 CORS allows `http://localhost:5173` and `https://client.insovaidev.workers.dev` (see `server/src/index.ts`).
 

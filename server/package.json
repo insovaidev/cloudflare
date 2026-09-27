@@ -6,17 +6,17 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
-    "db:create": "wrangler d1 create my-app-db",
-    "db:migrate:local": "wrangler d1 execute my-app-db --local --file=./schema.sql",
-    "db:migrate:remote": "wrangler d1 execute my-app-db --remote --file=./schema.sql",
+    "db:create": "wrangler d1 create My-cloudflare",
+    "db:migrate:local": "wrangler d1 execute My-cloudflare --local --file=./schema.sql",
+    "db:migrate:remote": "wrangler d1 execute My-cloudflare --remote --file=./schema.sql",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.6.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240909.0",
+    "@cloudflare/workers-types": "^5.20260927.1",
     "typescript": "^5.6.0",
-    "wrangler": "^3.78.0"
+    "wrangler": "^4.142.0"
   }
 }
