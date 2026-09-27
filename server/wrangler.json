@@ -9,7 +9,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "my-app-db"
+      "database_name": "My-cloudflare",
+      "database_id": "5aba4c6c-e131-4136-90b0-110657009862"
     }
   ]
 }

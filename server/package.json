@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
-    "db:create": "wrangler d1 create my-app-db",
-    "db:migrate:local": "wrangler d1 execute my-app-db --local --file=./schema.sql",
-    "db:migrate:remote": "wrangler d1 execute my-app-db --remote --file=./schema.sql",
+    "db:create": "wrangler d1 create My-cloudflare",
+    "db:migrate:local": "wrangler d1 execute My-cloudflare --local --file=./schema.sql",
+    "db:migrate:remote": "wrangler d1 execute My-cloudflare --remote --file=./schema.sql",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

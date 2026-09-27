@@ -4,7 +4,7 @@ Two Cloudflare Workers, matching the dashboard:
 
 | Worker   | URL                                     | What it is                          |
 | -------- | --------------------------------------- | ----------------------------------- |
-| `server` | https://server.insovaidev.workers.dev   | Hono API + Cloudflare D1 (`my-app-db`) |
+| `server` | https://server.insovaidev.workers.dev   | Hono API + Cloudflare D1 (`My-cloudflare`) |
 | `client` | https://client.insovaidev.workers.dev   | Vue 3 + Vite SPA (static assets)    |
 
 ```
@@ -27,7 +27,7 @@ Two Cloudflare Workers, matching the dashboard:
 
 ```bash
 cd server && npm install && npx wrangler login   # or export CLOUDFLARE_API_TOKEN
-npm run deploy                       # first deploy auto-creates the D1 database my-app-db
+npm run deploy                       # uses D1 database My-cloudflare (id in server/wrangler.json)
 npm run db:migrate:remote            # create tables + seed users
 ```
 
