@@ -1,12 +1,13 @@
 {
-  "name": "my-frontend",
+  "name": "client",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "vue": "^3.5.0"
@@ -15,6 +16,7 @@
     "@vitejs/plugin-vue": "^5.1.0",
     "typescript": "^5.6.0",
     "vite": "^5.4.0",
-    "vue-tsc": "^2.1.0"
+    "vue-tsc": "^2.1.0",
+    "wrangler": "^3.78.0"
   }
 }

@@ -10,7 +10,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 // Enable CORS
 app.use('*', cors({
-  origin: ['http://localhost:5173', 'https://yourdomain.com'],
+  origin: ['http://localhost:5173', 'https://client.insovaidev.workers.dev'],
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }));
