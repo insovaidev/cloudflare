@@ -1,0 +1,255 @@
+/* Apple Notes design tokens (see awesome-ios-design-md / apple-notes). */
+:root {
+  --canvas: #fffbed;
+  --surface-1: #faf6e3;
+  --surface-2: #f2edd6;
+  --divider: #edead8;
+  --ink: #1c1c1e;
+  --slate: #8e8e93;
+  --mute: #c7c7cc;
+  --orange: #f09a38;
+  --orange-pressed: #d87e1f;
+  --orange-tint: #fff1dd;
+  --orange-text: #c26d0f; /* orange for small text on cream, meets contrast */
+  --folder: #f5d773;
+  --folder-hi: #fae8a0;
+  --highlight: #ffeb78;
+  --green: #34c759;
+  --red: #ff3b30;
+  --material: rgba(255, 251, 237, 0.82);
+
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --shadow-fab: 0 4px 12px rgba(240, 154, 56, 0.3);
+  --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, 0.16);
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #1a1a1a;
+    --surface-1: #262626;
+    --surface-2: #333333;
+    --divider: #2a2a2a;
+    --ink: #f2f2f2;
+    --slate: #8e8e93;
+    --mute: #48484a;
+    --orange-tint: #3a2a14;
+    --orange-text: #f5a849;
+    --highlight: #6b5a12;
+    --material: rgba(26, 26, 26, 0.82);
+    color-scheme: dark;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.3;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app { height: 100%; }
+
+::selection { background: var(--highlight); color: inherit; }
+
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: default; opacity: 0.5; }
+input, textarea { font: inherit; color: inherit; caret-color: var(--orange); }
+a { color: var(--orange-text); }
+
+:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; border-radius: 6px; }
+
+/* ---------- Shared components ---------- */
+
+.large-title {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.4px;
+  margin: 0;
+}
+
+.section-header {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  color: var(--slate);
+  margin: 24px 16px 6px;
+}
+
+.text-btn {
+  background: none;
+  border: 0;
+  padding: 0 4px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--orange);
+  font-size: 17px;
+}
+.text-btn:active { color: var(--orange-pressed); }
+
+.icon-btn {
+  background: none;
+  border: 0;
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--orange);
+  border-radius: 50%;
+}
+.icon-btn:active { background: var(--surface-1); }
+.icon-btn.ink { color: var(--ink); }
+.icon-btn.danger { color: var(--red); }
+
+.primary-btn {
+  background: var(--orange);
+  color: #fff;
+  border: 0;
+  border-radius: 12px;
+  min-height: 44px;
+  padding: 12px 24px;
+  font-size: 17px;
+  font-weight: 600;
+  transition: transform 0.12s, background 0.12s;
+}
+.primary-btn:active:not(:disabled) { background: var(--orange-pressed); transform: scale(0.98); }
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  margin: 8px 16px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--surface-1);
+  color: var(--slate);
+  border: 2px solid transparent;
+}
+.search:focus-within { border-color: var(--orange); }
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 17px;
+  color: var(--ink);
+}
+.search input::placeholder { color: var(--slate); }
+
+.chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 16px 8px;
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none;
+  height: 32px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 0;
+  background: var(--orange-tint);
+  color: var(--orange-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.chip.selected { background: var(--orange); color: #fff; }
+.chip.static { cursor: default; }
+.chip.neutral { background: var(--surface-2); color: var(--ink); }
+
+.fab {
+  position: absolute;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--orange);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-fab);
+  z-index: 5;
+}
+.fab:active:not(:disabled) { animation: fab-pop 0.25s; background: var(--orange-pressed); }
+@keyframes fab-pop { 0% { transform: scale(0.95); } 60% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.banner {
+  margin: 8px 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--surface-1);
+}
+.banner.error { color: var(--red); }
+
+.empty {
+  color: var(--slate);
+  text-align: center;
+  padding: 48px 24px;
+  font-size: 15px;
+}
+
+.field {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: var(--surface-1);
+  outline: 0;
+  font-size: 17px;
+}
+.field:focus { border-color: var(--orange); }
+.field::placeholder { color: var(--slate); }
+
+/* Checklist circle (skill gaps / stack items) */
+.check-circle {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--slate);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: transparent;
+  padding: 0;
+}
+.check-circle.filled {
+  background: var(--orange);
+  border-color: var(--orange);
+  animation: fill 0.2s var(--ease);
+}
+@keyframes fill { from { transform: scale(0.4); } to { transform: scale(1); } }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}

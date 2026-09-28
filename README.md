@@ -1,71 +1,144 @@
-# cloudflare — Hono + D1 + Vue 3 on Cloudflare Workers
+# Skill Gap — job postings → side-projects → GitHub repos
 
-Two Cloudflare Workers, matching the dashboard:
+An automated pipeline on Cloudflare: a cron Worker scrapes job postings, Claude compares each one with your
+tech stack, designs a side-project that closes the gaps, a new GitHub repo is created with the generated
+`README.md`, and your browser gets a Web Push notification. A Vue 3 dashboard (styled after Apple Notes)
+lets you manage it all.
 
-| Worker   | URL                                     | What it is                          |
-| -------- | --------------------------------------- | ----------------------------------- |
-| `server` | https://server.insovaidev.workers.dev   | Hono API + Cloudflare D1 (`My-cloudflare`) |
-| `client` | https://client.insovaidev.workers.dev   | Vue 3 + Vite SPA (static assets)    |
+| Worker   | URL                                   | What it is                                           |
+| -------- | ------------------------------------- | ---------------------------------------------------- |
+| `server` | https://server.insovaidev.workers.dev | Hono API + Cron Trigger + D1 (`My-cloudflare`)       |
+| `client` | https://client.insovaidev.workers.dev | Vue 3 dashboard + service worker (`sw.js`)           |
+
+## How it works
 
 ```
-.
-├── server/             # Worker "server" (Hono API + D1)
-│   ├── src/index.ts    # API routes
-│   ├── schema.sql      # D1 schema + seed data
-│   ├── package.json
-│   └── wrangler.json   # Worker + D1 binding
-└── client/             # Worker "client" (Vue 3 static site)
-    ├── src/App.vue
-    ├── src/main.ts
-    ├── .env.production # VITE_API_URL → server worker
-    ├── package.json
-    ├── vite.config.ts
-    └── wrangler.json   # serves ./dist as an SPA
+Cron Trigger (every 6h)                                      Vue 3 dashboard
+      │                                                     (skills, targets, projects,
+      ▼                                                      push opt-in) ── Hono API ──┐
+ server Worker ── fetch job URL ── HTML → text ── SHA-256 (skip if unchanged)            │
+      │                                                                                  ▼
+      ├─ read skills from D1 ── Claude (structured JSON: gaps + project + README) ──►  D1
+      ├─ GitHub REST: POST /user/repos → PUT README.md (initial commit)
+      └─ Web Push (VAPID + aes128gcm) ──► service worker ──► native notification → repo link
 ```
 
-## First-time setup
+1. **Trigger & scraping** — `scheduled()` in `server/src/index.ts` runs `runAll()` (`server/src/pipeline.ts`), which
+   picks up to `MAX_TARGETS_PER_RUN` active targets (least recently checked first) and fetches each page
+   (`server/src/scrape.ts`). A posting whose text hash was already analyzed is skipped.
+2. **Skill analysis** — `server/src/claude.ts` sends your stack (the `skills` table) plus the posting to Claude
+   with a JSON-schema structured output: job title, company, required skills, missing skills with reasons, a
+   project name/title/summary and a complete README.
+3. **Repo creation** — `server/src/github.ts` creates the repo (private by default) and commits `README.md` as the
+   first commit. Name clashes get a short suffix.
+4. **Web Push** — `server/src/webpush.ts` signs a VAPID JWT and encrypts the payload (RFC 8291) using WebCrypto
+   only, then notifies every subscribed browser. Expired subscriptions are removed.
+5. **Dashboard** — `client/` manages skills and target URLs, registers `public/sw.js`, handles push permission, and
+   lists every analysis with its gaps, rendered README and repo link.
+
+## Project layout
+
+```
+server/
+  src/index.ts        Hono routes + cron entry point
+  src/pipeline.ts     scrape → Claude → GitHub → push
+  src/scrape.ts       fetch + HTML-to-text + hash
+  src/claude.ts       Claude call (Anthropic SDK, structured outputs)
+  src/github.ts       repo + README commit
+  src/webpush.ts      VAPID + aes128gcm on WebCrypto
+  schema.sql          D1 tables (skills, targets, analyses, push_subscriptions)
+  scripts/generate-vapid.mjs
+  wrangler.json       cron schedule, vars, D1 binding
+client/
+  src/App.vue         split-view shell (folders | list | detail), phone push-navigation
+  src/components/     Sidebar, ProjectList, ProjectDetail, StackPane, TargetsPane, SettingsPane, LockScreen
+  src/lib/            api, store, push, markdown (sanitized), formatting
+  public/sw.js        push + notificationclick handlers
+```
+
+## Setup
+
+### 1. Secrets
+
+| Secret              | What it is |
+| ------------------- | ---------- |
+| `ADMIN_TOKEN`       | Any long random string. The dashboard asks for it once per browser; every API route except `/api/health` and `/api/push/public-key` requires it. |
+| `ANTHROPIC_API_KEY` | From console.anthropic.com. |
+| `GITHUB_TOKEN`      | Fine-grained PAT with *All repositories* → **Administration: Read and write** and **Contents: Read and write** (or a classic PAT with `repo`). |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Generate with `npm run vapid`. |
 
 ```bash
-cd server && npm install && npx wrangler login   # or export CLOUDFLARE_API_TOKEN
-npm run deploy                       # uses D1 database My-cloudflare (id in server/wrangler.json)
-npm run db:migrate:remote            # create tables + seed users
+cd server && npm install
+npm run vapid                               # prints both VAPID keys
+npx wrangler secret put ADMIN_TOKEN
+npx wrangler secret put ANTHROPIC_API_KEY
+npx wrangler secret put GITHUB_TOKEN
+npx wrangler secret put VAPID_PUBLIC_KEY
+npx wrangler secret put VAPID_PRIVATE_KEY
 ```
 
-## Deploy
+### 2. Database and deploy
 
 ```bash
-cd server && npm run deploy          # → server.insovaidev.workers.dev
-cd ../client && npm install && npm run deploy   # builds, → client.insovaidev.workers.dev
+cd server
+npm run db:migrate:remote        # creates the tables (safe to re-run)
+npm run deploy                   # → server.insovaidev.workers.dev (cron included)
+cd ../client && npm install && npm run deploy   # → client.insovaidev.workers.dev
 ```
+
+Open the dashboard, enter your `ADMIN_TOKEN`, add your skills under **My Stack**, add job posting URLs under
+**Job Targets**, and turn on notifications under **Settings**. Tap the orange button on **Projects** to run the
+pipeline immediately instead of waiting for the cron.
+
+### Configuration (`server/wrangler.json`)
+
+| Setting | Default | Notes |
+| --- | --- | --- |
+| `triggers.crons` | `0 */6 * * *` | Cron schedule (UTC). |
+| `CLAUDE_MODEL` | `claude-opus-5` | Model used for analysis. Refused requests fall back server-side (`fallbacks: "default"`). |
+| `GITHUB_REPO_PRIVATE` | `true` | Set to `false` to create public repos. |
+| `VAPID_SUBJECT` | `mailto:…` | Contact for push services. |
+| `DASHBOARD_URL` | client URL | Used for the notification's “Dashboard” action. |
+| `MAX_TARGETS_PER_RUN` | `5` | Targets processed per run (keeps within Worker subrequest limits). |
 
 ## Local development
 
 ```bash
-cd server && npm run db:migrate:local && npm run dev   # http://localhost:8787
-cd client && npm run dev                               # http://localhost:5173
+cd server
+cp .dev.vars.example .dev.vars     # fill in real values
+npm run db:migrate:local
+npm run dev                        # http://localhost:8787 (with --test-scheduled)
+npm run cron:test                  # fire the cron handler once
+
+cd client && npm run dev           # http://localhost:5173
 ```
+
+Web Push needs HTTPS or `localhost`; the service worker is served from `client/public/sw.js`.
 
 ## API
 
-| Method | Path          | Description |
-| ------ | ------------- | ----------- |
-| GET    | `/api/health` | Health check |
-| GET    | `/api/users`      | List users |
-| GET    | `/api/users/:id`  | Get one user (404 if missing) |
-| POST   | `/api/users`      | Create user `{ name, email }` → 201 (409 on duplicate email) |
-| PUT    | `/api/users/:id`  | Update user `{ name, email }` (404 / 409) |
-| DELETE | `/api/users/:id`  | Delete user (404 if missing) |
+All routes except the first two need `Authorization: Bearer <ADMIN_TOKEN>`.
 
-Emails are trimmed, lower-cased and validated; invalid input returns 400.
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/health` | Health check |
+| GET | `/api/push/public-key` | VAPID public key for `pushManager.subscribe` |
+| GET | `/api/status` | Which secrets are configured |
+| GET / POST / DELETE | `/api/skills`, `/api/skills/:id` | Your stack `{ name }` |
+| GET / POST | `/api/targets` | Job URLs `{ url, label? }` |
+| PATCH / DELETE | `/api/targets/:id` | `{ label?, active? }` |
+| POST | `/api/targets/:id/run[?force=1]` | Run the pipeline for one URL now (`force` re-analyzes unchanged pages) |
+| POST | `/api/run[?force=1]` | Same as the cron run |
+| GET | `/api/analyses`, `/api/analyses/:id` | Analyses (detail includes the README) |
+| PATCH / DELETE | `/api/analyses/:id` | `{ pinned }` / delete (the GitHub repo is kept) |
+| POST | `/api/push/subscribe`, `/api/push/unsubscribe`, `/api/push/test` | Manage Web Push subscriptions |
 
-A Cloudflare API token needs **Workers Scripts: Edit** and **D1: Edit** (account level) to deploy.
+## Notes and limits
 
-CORS allows `http://localhost:5173` and `https://client.insovaidev.workers.dev` (see `server/src/index.ts`).
-
-## Free tier
-
-| Component | Free allowance |
-| --- | --- |
-| D1 (SQLite) | 5 GB storage, 5M row reads/day, 100k row writes/day |
-| Workers | 100,000 requests/day, 10 ms CPU/request |
-| Static assets | Free, unlimited requests |
+- Pages that render with JavaScript or sit behind a login return little text and are marked *failed*. Postings
+  longer than 60k characters are truncated before being sent to Claude (the prompt says so).
+- The job page is untrusted input: the prompt tells Claude to treat it as data, and the README is sanitized with
+  DOMPurify before the dashboard renders it.
+- Each analysis makes one Claude call (a few cents with Opus; set `CLAUDE_MODEL` to `claude-sonnet-5` for cheaper
+  runs) and creates one repo. Unchanged pages cost nothing beyond the fetch.
+- The Cloudflare API token used for deploys needs **Workers Scripts: Edit** and **D1: Edit**.

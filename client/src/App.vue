@@ -1,148 +1,112 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import Sidebar from './components/Sidebar.vue'
+import ProjectList from './components/ProjectList.vue'
+import ProjectDetail from './components/ProjectDetail.vue'
+import StackPane from './components/StackPane.vue'
+import TargetsPane from './components/TargetsPane.vue'
+import SettingsPane from './components/SettingsPane.vue'
+import LockScreen from './components/LockScreen.vue'
+import Icon from './components/Icon.vue'
+import { state, loadAll, selectAnalysis } from './lib/store'
+import { registerServiceWorker } from './lib/push'
 
-interface User {
-  id: number
-  name: string
-  email: string
-  created_at: string
-}
+const stack = ref<InstanceType<typeof StackPane>>()
+const targets = ref<InstanceType<typeof TargetsPane>>()
 
-const users = ref<User[]>([])
-const loading = ref<boolean>(true)
-const saving = ref<boolean>(false)
-const error = ref<string>('')
-const nameInput = ref('')
-const emailInput = ref('')
-
-const editingId = ref<number | null>(null)
-const editName = ref('')
-const editEmail = ref('')
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
-
-// Shared fetch wrapper: parses JSON and throws the API's error message on failure.
-const api = async <T,>(path: string, init?: RequestInit): Promise<T> => {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-  })
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
-  return data as T
-}
-
-// Runs a mutation, surfacing any error in the banner.
-const run = async (fn: () => Promise<void>) => {
-  saving.value = true
-  error.value = ''
-  try {
-    await fn()
-  } catch (err: any) {
-    error.value = err.message
-  } finally {
-    saving.value = false
+onMounted(async () => {
+  registerServiceWorker().catch((err) => console.warn('Service worker registration failed', err))
+  if (state.locked) {
+    state.loading = false
+    return
   }
-}
-
-const fetchUsers = async () => {
-  try {
-    const data = await api<{ users: User[] }>('/api/users')
-    users.value = data.users || []
-    error.value = ''
-  } catch (err: any) {
-    console.error('Fetch error:', err)
-    error.value = err.message
-  } finally {
-    loading.value = false
+  await loadAll()
+  // Deep link from a push notification: /?analysis=42
+  const id = Number(new URLSearchParams(location.search).get('analysis'))
+  if (Number.isInteger(id) && id > 0) {
+    await selectAnalysis(id)
+    history.replaceState(null, '', location.pathname)
   }
-}
-
-const addUser = () => run(async () => {
-  await api('/api/users', {
-    method: 'POST',
-    body: JSON.stringify({ name: nameInput.value, email: emailInput.value }),
-  })
-  nameInput.value = ''
-  emailInput.value = ''
-  await fetchUsers()
-})
-
-const startEdit = (user: User) => {
-  editingId.value = user.id
-  editName.value = user.name
-  editEmail.value = user.email
-}
-
-const cancelEdit = () => {
-  editingId.value = null
-}
-
-const saveEdit = (id: number) => run(async () => {
-  await api(`/api/users/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({ name: editName.value, email: editEmail.value }),
-  })
-  editingId.value = null
-  await fetchUsers()
-})
-
-const deleteUser = (user: User) => {
-  if (!confirm(`Delete ${user.name}?`)) return
-  return run(async () => {
-    await api(`/api/users/${user.id}`, { method: 'DELETE' })
-    await fetchUsers()
-  })
-}
-
-onMounted(() => {
-  fetchUsers()
 })
 </script>
 
 <template>
-  <main class="page">
-    <h1>Cloudflare Stack (Hono + D1 + Vue 3)</h1>
+  <LockScreen v-if="state.locked" />
 
-    <section class="card">
-      <h3>Add New User (Saved directly to Cloudflare D1)</h3>
-      <form @submit.prevent="addUser" class="row">
-        <input v-model="nameInput" placeholder="Name" required />
-        <input v-model="emailInput" type="email" placeholder="Email" required />
-        <button type="submit" :disabled="saving">Add User</button>
-      </form>
-    </section>
+  <div v-else class="shell" :data-folder="state.folder" :data-depth="state.depth">
+    <aside class="pane sidebar-pane"><Sidebar /></aside>
 
-    <p v-if="error" class="error">Error: {{ error }}</p>
+    <template v-if="state.folder === 'projects'">
+      <div class="pane list-pane"><ProjectList /></div>
+      <main class="pane detail-pane"><ProjectDetail /></main>
+    </template>
+    <main v-else class="pane wide-pane">
+      <StackPane v-if="state.folder === 'stack'" ref="stack" />
+      <TargetsPane v-else-if="state.folder === 'targets'" ref="targets" />
+      <SettingsPane v-else />
+      <button
+        v-if="state.folder !== 'settings'"
+        class="fab"
+        :aria-label="state.folder === 'stack' ? 'Add a skill' : 'Add a job URL'"
+        @click="(state.folder === 'stack' ? stack : targets)?.focus()"
+      >
+        <Icon name="plus" :size="26" />
+      </button>
+    </main>
 
-    <div v-if="loading">Loading from D1 edge database...</div>
-    <p v-else-if="!users.length">No users yet.</p>
-    <ul v-else class="list">
-      <li v-for="user in users" :key="user.id">
-        <form v-if="editingId === user.id" @submit.prevent="saveEdit(user.id)" class="row">
-          <input v-model="editName" placeholder="Name" required />
-          <input v-model="editEmail" type="email" placeholder="Email" required />
-          <button type="submit" :disabled="saving">Save</button>
-          <button type="button" @click="cancelEdit">Cancel</button>
-        </form>
-        <div v-else class="row">
-          <span class="grow"><strong>{{ user.name }}</strong> ({{ user.email }})</span>
-          <button type="button" @click="startEdit(user)" :disabled="saving">Edit</button>
-          <button type="button" class="danger" @click="deleteUser(user)" :disabled="saving">Delete</button>
-        </div>
-      </li>
-    </ul>
-  </main>
+    <div v-if="state.error" class="banner error floating" role="alert">
+      {{ state.error }}
+      <button class="text-btn" @click="state.error = ''">Dismiss</button>
+    </div>
+    <Transition name="toast">
+      <div v-if="state.toast" class="toast" role="status">{{ state.toast }}</div>
+    </Transition>
+  </div>
 </template>
 
 <style>
-.page { max-width: 640px; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; }
-.card { margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc; border-radius: 8px; }
-.row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-.row input { flex: 1; min-width: 120px; }
-.grow { flex: 1; }
-.list { list-style: none; padding: 0; }
-.list li { padding: 0.5rem 0; border-bottom: 1px solid #eee; }
-.error { color: #c00; }
-.danger { color: #c00; }
+.shell {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: var(--canvas);
+  padding-top: env(safe-area-inset-top);
+}
+.pane { position: relative; min-width: 0; height: 100%; overflow: hidden; background: var(--canvas); }
+
+/* Phone: hierarchical push navigation — one pane at a time. */
+@media (max-width: 899px) {
+  .pane { display: none; animation: push-in 0.35s var(--ease); }
+  .shell[data-depth='folders'] .sidebar-pane,
+  .shell[data-depth='list'] .list-pane,
+  .shell[data-depth='list'] .wide-pane,
+  .shell[data-depth='detail'] .detail-pane,
+  .shell[data-depth='detail'] .wide-pane { display: block; }
+}
+@keyframes push-in { from { transform: translateX(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+
+/* iPad / desktop: split view — folders | notes | editor. */
+@media (min-width: 900px) {
+  .shell { grid-template-columns: 280px 340px 1fr; }
+  .shell:not([data-folder='projects']) { grid-template-columns: 280px 1fr; }
+  .sidebar-pane { background: var(--surface-1); border-right: 0.5px solid var(--divider); }
+  .sidebar-pane .row::after { display: none; }
+  .sidebar-pane .row:active, .sidebar-pane .row.active { background: var(--surface-2); }
+  .list-pane { border-right: 0.5px solid var(--divider); }
+  .mobile-only { display: none !important; }
+}
+
+.floating {
+  position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top)); transform: translateX(-50%);
+  z-index: 20; max-width: min(560px, calc(100% - 32px)); margin: 0;
+  display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.toast {
+  position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 20; max-width: calc(100% - 32px);
+  padding: 10px 16px; border-radius: 16px; font-size: 14px; font-weight: 500;
+  background: var(--ink); color: var(--canvas); box-shadow: var(--shadow-sheet);
+}
+.toast-enter-active, .toast-leave-active { transition: opacity 0.25s, transform 0.25s var(--ease); }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translate(-50%, 12px); }
 </style>

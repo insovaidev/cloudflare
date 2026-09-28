@@ -4,14 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --test-scheduled",
     "deploy": "wrangler deploy --minify",
     "db:create": "wrangler d1 create My-cloudflare",
     "db:migrate:local": "wrangler d1 execute My-cloudflare --local --file=./schema.sql",
     "db:migrate:remote": "wrangler d1 execute My-cloudflare --remote --file=./schema.sql",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "vapid": "node scripts/generate-vapid.mjs",
+    "cron:test": "curl \"http://localhost:8787/__scheduled?cron=0+*/6+*+*+*\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "hono": "^4.6.0"
   },
   "devDependencies": {

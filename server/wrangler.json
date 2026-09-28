@@ -2,10 +2,26 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "server",
   "main": "src/index.ts",
-  "compatibility_date": "2024-09-01",
+  "compatibility_date": "2025-09-01",
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    // Every 6 hours. Change the schedule here and redeploy.
+    "crons": ["0 */6 * * *"]
+  },
+  "vars": {
+    "CLAUDE_MODEL": "claude-opus-5",
+    "GITHUB_REPO_PRIVATE": "true",
+    "VAPID_SUBJECT": "mailto:insovaidev@gmail.com",
+    "DASHBOARD_URL": "https://client.insovaidev.workers.dev",
+    "MAX_TARGETS_PER_RUN": "5"
+  },
+  // Secrets (not in this file): ADMIN_TOKEN, ANTHROPIC_API_KEY, GITHUB_TOKEN,
+  // VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY — set with `npx wrangler secret put <NAME>`.
   "d1_databases": [
     {
       "binding": "DB",
