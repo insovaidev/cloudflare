@@ -23,7 +23,7 @@ defineExpose({ focus: () => input.value?.focus() })
     <PaneHeader title="My Stack" />
     <div class="paper">
       <p class="intro">
-        Your baseline tech stack. Claude compares every job posting against this list to find what you’re missing.
+        Your baseline tech stack. Workers AI compares every job posting against this list to find what you’re missing.
       </p>
 
       <ul class="checklist">

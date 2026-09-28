@@ -42,7 +42,7 @@ const confirmDelete = () => {
       </p>
 
       <p v-if="a.status === 'failed'" class="banner error">{{ a.error || 'Analysis failed.' }}</p>
-      <p v-else-if="a.status === 'pending'" class="banner">Claude is still working on this one…</p>
+      <p v-else-if="a.status === 'pending'" class="banner">The AI is still working on this one…</p>
 
       <p v-if="a.project_summary" class="summary">{{ a.project_summary }}</p>
 

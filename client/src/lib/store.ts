@@ -19,7 +19,7 @@ export const state = reactive({
   detail: null as Analysis | null,
   running: false,
   runningTargetId: null as number | null,
-  status: { claude: false, github: false, push: false },
+  status: { ai: false, github: false, push: false },
 })
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined

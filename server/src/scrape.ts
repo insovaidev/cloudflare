@@ -1,6 +1,7 @@
-// Fetch a job posting and reduce it to readable text for Claude.
+// Fetch a job posting and reduce it to readable text for the AI model.
 
-const MAX_CHARS = 60_000;
+// Keeps prompt + output inside the Workers AI model's context window.
+const MAX_CHARS = 24_000;
 
 const ENTITIES: Record<string, string> = {
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'",

@@ -70,7 +70,7 @@ const pushLabel: Record<PushState, string> = {
         <div class="row">
           <span class="text"><span>API</span><small>{{ API_URL }}</small></span>
         </div>
-        <div class="row" v-for="(ok, key) in { 'Claude API key': state.status.claude, 'GitHub token': state.status.github, 'VAPID keys': state.status.push }" :key="key">
+        <div class="row" v-for="(ok, key) in { 'Workers AI binding': state.status.ai, 'GitHub token': state.status.github, 'VAPID keys': state.status.push }" :key="key">
           <span class="text"><span>{{ key }}</span></span>
           <span :class="ok ? 'ok' : 'missing'">{{ ok ? 'Configured' : 'Missing' }}</span>
         </div>

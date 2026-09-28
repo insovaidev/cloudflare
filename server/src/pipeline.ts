@@ -1,7 +1,7 @@
-// Scrape → Claude analysis → GitHub repo → Web Push, for one or many targets.
+// Scrape → Workers AI analysis → GitHub repo → Web Push, for one or many targets.
 import type { Env, Target } from './env';
 import { scrapeJob } from './scrape';
-import { analyzeJob } from './claude';
+import { analyzeJob } from './analyze';
 import { createRepoWithReadme } from './github';
 import { broadcastPush } from './webpush';
 

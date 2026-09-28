@@ -1,7 +1,7 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
-// README text originates from scraped third-party pages via Claude, so always sanitize.
+// README text originates from scraped third-party pages via the AI model, so always sanitize.
 export const renderMarkdown = (md: string) => {
   const html = marked.parse(md, { async: false, gfm: true }) as string
   const clean = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } })

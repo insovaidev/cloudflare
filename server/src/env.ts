@@ -1,14 +1,14 @@
 // Cloudflare bindings, vars and secrets (see wrangler.json and README).
 export type Env = {
   DB: D1Database;
+  AI: Ai;
   // Secrets (wrangler secret put …)
   ADMIN_TOKEN: string;
-  ANTHROPIC_API_KEY: string;
   GITHUB_TOKEN: string;
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY: string;
   // Vars
-  CLAUDE_MODEL?: string;
+  AI_MODEL?: string;
   GITHUB_REPO_PRIVATE?: string;
   VAPID_SUBJECT?: string;
   DASHBOARD_URL?: string;

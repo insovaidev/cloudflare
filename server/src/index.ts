@@ -68,7 +68,7 @@ app.use('/api/*', async (c, next) => {
 });
 
 app.get('/api/status', (c) => c.json({
-  claude: Boolean(c.env.ANTHROPIC_API_KEY),
+  ai: Boolean(c.env.AI),
   github: Boolean(c.env.GITHUB_TOKEN),
   push: Boolean(c.env.VAPID_PUBLIC_KEY && c.env.VAPID_PRIVATE_KEY),
 }));

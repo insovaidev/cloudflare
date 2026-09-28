@@ -1,7 +1,7 @@
 # Skill Gap — job postings → side-projects → GitHub repos
 
-An automated pipeline on Cloudflare: a cron Worker scrapes job postings, Claude compares each one with your
-tech stack, designs a side-project that closes the gaps, a new GitHub repo is created with the generated
+An automated pipeline on Cloudflare: a cron Worker scrapes job postings, Workers AI (free tier) compares each
+one with your tech stack, designs a side-project that closes the gaps, a new GitHub repo is created with the generated
 `README.md`, and your browser gets a Web Push notification. A Vue 3 dashboard (styled after Apple Notes)
 lets you manage it all.
 
@@ -18,7 +18,7 @@ Cron Trigger (every 6h)                                      Vue 3 dashboard
       ▼                                                      push opt-in) ── Hono API ──┐
  server Worker ── fetch job URL ── HTML → text ── SHA-256 (skip if unchanged)            │
       │                                                                                  ▼
-      ├─ read skills from D1 ── Claude (structured JSON: gaps + project + README) ──►  D1
+      ├─ read skills from D1 ── Workers AI (JSON: gaps + project + README) ──►  D1
       ├─ GitHub REST: POST /user/repos → PUT README.md (initial commit)
       └─ Web Push (VAPID + aes128gcm) ──► service worker ──► native notification → repo link
 ```
@@ -26,8 +26,8 @@ Cron Trigger (every 6h)                                      Vue 3 dashboard
 1. **Trigger & scraping** — `scheduled()` in `server/src/index.ts` runs `runAll()` (`server/src/pipeline.ts`), which
    picks up to `MAX_TARGETS_PER_RUN` active targets (least recently checked first) and fetches each page
    (`server/src/scrape.ts`). A posting whose text hash was already analyzed is skipped.
-2. **Skill analysis** — `server/src/claude.ts` sends your stack (the `skills` table) plus the posting to Claude
-   with a JSON-schema structured output: job title, company, required skills, missing skills with reasons, a
+2. **Skill analysis** — `server/src/analyze.ts` sends your stack (the `skills` table) plus the posting to
+   Cloudflare Workers AI (Llama 3.3 70B by default) in JSON mode, asking for: job title, company, required skills, missing skills with reasons, a
    project name/title/summary and a complete README.
 3. **Repo creation** — `server/src/github.ts` creates the repo (private by default) and commits `README.md` as the
    first commit. Name clashes get a short suffix.
@@ -41,9 +41,9 @@ Cron Trigger (every 6h)                                      Vue 3 dashboard
 ```
 server/
   src/index.ts        Hono routes + cron entry point
-  src/pipeline.ts     scrape → Claude → GitHub → push
+  src/pipeline.ts     scrape → Workers AI → GitHub → push
   src/scrape.ts       fetch + HTML-to-text + hash
-  src/claude.ts       Claude call (Anthropic SDK, structured outputs)
+  src/analyze.ts      Workers AI call (JSON mode)
   src/github.ts       repo + README commit
   src/webpush.ts      VAPID + aes128gcm on WebCrypto
   schema.sql          D1 tables (skills, targets, analyses, push_subscriptions)
@@ -63,7 +63,6 @@ client/
 | Secret              | What it is |
 | ------------------- | ---------- |
 | `ADMIN_TOKEN`       | Any long random string. The dashboard asks for it once per browser; every API route except `/api/health` and `/api/push/public-key` requires it. |
-| `ANTHROPIC_API_KEY` | From console.anthropic.com. |
 | `GITHUB_TOKEN`      | Fine-grained PAT with *All repositories* → **Administration: Read and write** and **Contents: Read and write** (or a classic PAT with `repo`). |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Generate with `npm run vapid`. |
 
@@ -71,7 +70,6 @@ client/
 cd server && npm install
 npm run vapid                               # prints both VAPID keys
 npx wrangler secret put ADMIN_TOKEN
-npx wrangler secret put ANTHROPIC_API_KEY
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put VAPID_PUBLIC_KEY
 npx wrangler secret put VAPID_PRIVATE_KEY
@@ -95,7 +93,7 @@ pipeline immediately instead of waiting for the cron.
 | Setting | Default | Notes |
 | --- | --- | --- |
 | `triggers.crons` | `0 */6 * * *` | Cron schedule (UTC). |
-| `CLAUDE_MODEL` | `claude-opus-5` | Model used for analysis. Refused requests fall back server-side (`fallbacks: "default"`). |
+| `AI_MODEL` | `@cf/meta/llama-3.3-70b-instruct-fp8-fast` | Workers AI model used for analysis (the `AI` binding needs no key). |
 | `GITHUB_REPO_PRIVATE` | `true` | Set to `false` to create public repos. |
 | `VAPID_SUBJECT` | `mailto:…` | Contact for push services. |
 | `DASHBOARD_URL` | client URL | Used for the notification's “Dashboard” action. |
@@ -136,9 +134,11 @@ All routes except the first two need `Authorization: Bearer <ADMIN_TOKEN>`.
 ## Notes and limits
 
 - Pages that render with JavaScript or sit behind a login return little text and are marked *failed*. Postings
-  longer than 60k characters are truncated before being sent to Claude (the prompt says so).
-- The job page is untrusted input: the prompt tells Claude to treat it as data, and the README is sanitized with
+  longer than 24k characters are truncated to fit the model's context window (the prompt says so).
+- The job page is untrusted input: the prompt tells the model to treat it as data, and the README is sanitized with
   DOMPurify before the dashboard renders it.
-- Each analysis makes one Claude call (a few cents with Opus; set `CLAUDE_MODEL` to `claude-sonnet-5` for cheaper
-  runs) and creates one repo. Unchanged pages cost nothing beyond the fetch.
-- The Cloudflare API token used for deploys needs **Workers Scripts: Edit** and **D1: Edit**.
+- Each analysis makes one Workers AI call. The free tier (10,000 neurons/day) covers a few analyses a day; beyond
+  that Workers AI bills per use on the paid Workers plan. Unchanged pages cost nothing beyond the fetch.
+- The Claude API integration was removed; the model is open-weight, so gap analysis and READMEs are less
+  polished than a frontier model's.
+- The Cloudflare API token used for deploys needs **Workers Scripts: Edit**, **D1: Edit** and **Workers AI: Read**.

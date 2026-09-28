@@ -14,7 +14,6 @@
     "cron:test": "curl \"http://localhost:8787/__scheduled?cron=0+*/6+*+*+*\""
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.128.0",
     "hono": "^4.6.0"
   },
   "devDependencies": {

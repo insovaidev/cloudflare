@@ -48,7 +48,7 @@ const folders: { id: Exclude<Folder, 'settings'>; name: string }[] = [
     </ul>
 
     <p class="status">
-      <span :class="{ ok: state.status.claude }">Claude</span> ·
+      <span :class="{ ok: state.status.ai }">Workers AI</span> ·
       <span :class="{ ok: state.status.github }">GitHub</span> ·
       <span :class="{ ok: state.status.push }">Web Push</span>
     </p>

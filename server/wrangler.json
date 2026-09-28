@@ -14,14 +14,17 @@
     "crons": ["0 */6 * * *"]
   },
   "vars": {
-    "CLAUDE_MODEL": "claude-opus-5",
+    "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     "GITHUB_REPO_PRIVATE": "true",
     "VAPID_SUBJECT": "mailto:insovaidev@gmail.com",
     "DASHBOARD_URL": "https://client.insovaidev.workers.dev",
     "MAX_TARGETS_PER_RUN": "5"
   },
-  // Secrets (not in this file): ADMIN_TOKEN, ANTHROPIC_API_KEY, GITHUB_TOKEN,
+  // Secrets (not in this file): ADMIN_TOKEN, GITHUB_TOKEN,
   // VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY — set with `npx wrangler secret put <NAME>`.
+  "ai": {
+    "binding": "AI"
+  },
   "d1_databases": [
     {
       "binding": "DB",

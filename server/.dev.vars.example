@@ -1,6 +1,5 @@
 # Copy to .dev.vars for `npm run dev` (never commit .dev.vars)
 ADMIN_TOKEN=change-me
-ANTHROPIC_API_KEY=sk-ant-...
 GITHUB_TOKEN=github_pat_...
 VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
